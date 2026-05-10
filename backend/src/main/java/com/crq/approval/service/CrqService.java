@@ -54,7 +54,7 @@ public class CrqService {
      * Both bounds are inclusive and required.
      */
     public ProcessingLog runAdhocJob(String triggeredBy, LocalDateTime fromDateTime, LocalDateTime toDateTime) {
-        log.info("Ad-hoc run triggered by {} for range {} → {}", triggeredBy, fromDateTime, toDateTime);
+        log.info("Ad-hoc run triggered by {} for range {} -> {}", triggeredBy, fromDateTime, toDateTime);
         return runJob(Crq.BatchType.ADHOC, triggeredBy, fromDateTime, toDateTime);
     }
 
