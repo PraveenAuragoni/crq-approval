@@ -11,7 +11,7 @@ export const getAllCrqs = () => api.get('/list').then(r => r.data)
 
 export const getLogs = () => api.get('/logs').then(r => r.data)
 
-export const triggerAdhoc = (triggeredBy = 'UI_USER') =>
-  api.post('/adhoc', { triggeredBy }).then(r => r.data)
+export const triggerAdhoc = (triggeredBy = 'UI_USER', fromDateTime = null, toDateTime = null) =>
+  api.post('/adhoc', { triggeredBy, fromDateTime, toDateTime }).then(r => r.data)
 
 export const runNow = () => api.post('/run-now').then(r => r.data)

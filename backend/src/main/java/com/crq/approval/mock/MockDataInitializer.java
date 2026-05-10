@@ -7,6 +7,9 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Slf4j
 @Component
 @Profile("mock")
@@ -28,8 +31,10 @@ public class MockDataInitializer implements ApplicationRunner {
         crqService.runScheduledJob();
         log.info("[MOCK] Scheduled job data seeded.");
 
-        // Simulate one previous ad-hoc run so logs look rich
-        crqService.runAdhocJob("demo-user");
+        // Simulate one previous ad-hoc run using a range covering post-17:30 today
+        LocalDateTime from = LocalDate.now().atTime(17, 30);
+        LocalDateTime to = LocalDate.now().atTime(23, 59);
+        crqService.runAdhocJob("demo-user", from, to);
         log.info("[MOCK] Ad-hoc job data seeded.");
 
         log.info("====================================================");

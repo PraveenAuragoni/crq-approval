@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +19,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/crq")
 public class CrqController {
+
+    private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final CrqService crqService;
 
@@ -42,15 +47,38 @@ public class CrqController {
     }
 
     /**
-     * Ad-hoc trigger: processes CRQs updated after 5:30 PM today.
-     * Body: { "triggeredBy": "username" }
+     * Ad-hoc trigger: processes CRQs whose lastUpdated falls within [fromDateTime, toDateTime].
+     * Body: { "triggeredBy": "username", "fromDateTime": "2024-05-10T17:30:00", "toDateTime": "2024-05-10T23:59:59" }
+     * Both fromDateTime and toDateTime are required.
      */
     @PostMapping("/adhoc")
-    public ResponseEntity<ProcessingLogDto> triggerAdhoc(
+    public ResponseEntity<Object> triggerAdhoc(
             @RequestBody(required = false) Map<String, String> body) {
         String triggeredBy = body != null ? body.getOrDefault("triggeredBy", "UI_USER") : "UI_USER";
-        log.info("Ad-hoc CRQ run triggered by: {}", triggeredBy);
-        ProcessingLog result = crqService.runAdhocJob(triggeredBy);
+
+        LocalDateTime from;
+        LocalDateTime to;
+        try {
+            String fromRaw = body != null ? body.get("fromDateTime") : null;
+            String toRaw   = body != null ? body.get("toDateTime")   : null;
+            if (fromRaw == null || toRaw == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "fromDateTime and toDateTime are required."));
+            }
+            from = LocalDateTime.parse(fromRaw, DT_FMT);
+            to   = LocalDateTime.parse(toRaw,   DT_FMT);
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Invalid date format. Use ISO format: yyyy-MM-dd'T'HH:mm:ss"));
+        }
+
+        if (!from.isBefore(to)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "fromDateTime must be before toDateTime."));
+        }
+
+        log.info("Ad-hoc CRQ run triggered by: {} range: {} -> {}", triggeredBy, from, to);
+        ProcessingLog result = crqService.runAdhocJob(triggeredBy, from, to);
         return ResponseEntity.ok(ProcessingLogDto.from(result));
     }
 

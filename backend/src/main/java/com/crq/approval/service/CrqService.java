@@ -8,25 +8,17 @@ import com.crq.approval.model.ProcessingLog;
 import com.crq.approval.repository.CrqRepository;
 import com.crq.approval.repository.ProcessingLogRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class CrqService {
-
-    @Value("${crq.adhoc.threshold-time:17:30}")
-    private String adhocThresholdTime;
 
     private final OneDrivePort oneDriveService;
     private final ExcelService excelService;
@@ -54,21 +46,20 @@ public class CrqService {
      * check Remedy status, send email for approved ones.
      */
     public ProcessingLog runScheduledJob() {
-        return runJob(Crq.BatchType.SCHEDULED, "SCHEDULER", null);
+        return runJob(Crq.BatchType.SCHEDULED, "SCHEDULER", null, null);
     }
 
     /**
-     * Ad-hoc processing: only processes CRQs updated in Excel AFTER 5:30 PM today.
-     * Used for manual triggers from the UI after the scheduled run.
+     * Ad-hoc processing: processes CRQs whose lastUpdated falls within [fromDateTime, toDateTime].
+     * Both bounds are inclusive and required.
      */
-    public ProcessingLog runAdhocJob(String triggeredBy) {
-        LocalTime threshold = LocalTime.parse(adhocThresholdTime, DateTimeFormatter.ofPattern("HH:mm"));
-        LocalDateTime cutoff = LocalDate.now().atTime(threshold);
-        log.info("Ad-hoc run: processing CRQs updated after {}", cutoff);
-        return runJob(Crq.BatchType.ADHOC, triggeredBy, cutoff);
+    public ProcessingLog runAdhocJob(String triggeredBy, LocalDateTime fromDateTime, LocalDateTime toDateTime) {
+        log.info("Ad-hoc run triggered by {} for range {} -> {}", triggeredBy, fromDateTime, toDateTime);
+        return runJob(Crq.BatchType.ADHOC, triggeredBy, fromDateTime, toDateTime);
     }
 
-    private ProcessingLog runJob(Crq.BatchType batchType, String triggeredBy, LocalDateTime updatedAfter) {
+    private ProcessingLog runJob(Crq.BatchType batchType, String triggeredBy,
+                                 LocalDateTime updatedAfter, LocalDateTime updatedBefore) {
         LocalDateTime runAt = LocalDateTime.now();
         int totalRead = 0, approvedCount = 0, emailsSent = 0;
         String status = "SUCCESS";
@@ -82,12 +73,17 @@ public class CrqService {
             List<ExcelService.ExcelCrqRow> rows = excelService.parseExcel(stream);
             totalRead = rows.size();
 
-            // For ad-hoc: filter to only rows updated after cutoff
-            if (updatedAfter != null) {
+            // For ad-hoc: filter rows within the date-time range
+            if (updatedAfter != null || updatedBefore != null) {
                 rows = rows.stream()
-                        .filter(r -> r.getLastUpdated() != null && r.getLastUpdated().isAfter(updatedAfter))
-                        .collect(Collectors.toList());
-                log.info("Ad-hoc: {} CRQs pass the {} cutoff filter", rows.size(), updatedAfter);
+                        .filter(r -> {
+                            if (r.getLastUpdated() == null) return false;
+                            if (updatedAfter != null && r.getLastUpdated().isBefore(updatedAfter)) return false;
+                            if (updatedBefore != null && r.getLastUpdated().isAfter(updatedBefore)) return false;
+                            return true;
+                        })
+                        .toList();
+                log.info("Ad-hoc: {} CRQs in range [{}, {}]", rows.size(), updatedAfter, updatedBefore);
             }
 
             List<Crq> approvedCrqs = new ArrayList<>();
@@ -125,11 +121,11 @@ public class CrqService {
                     emailService.sendApprovalEmail(approvedCrqs);
                     emailsSent = approvedCrqs.size();
                     LocalDateTime now = LocalDateTime.now();
-                    for (Crq crq : approvedCrqs) {
+                    approvedCrqs.forEach(crq -> {
                         crq.setEmailSent(true);
                         crq.setEmailSentAt(now);
-                        crqRepository.save(crq);
-                    }
+                    });
+                    crqRepository.saveAll(approvedCrqs);
                 } catch (Exception e) {
                     log.error("Email sending failed: {}", e.getMessage());
                     status = "PARTIAL";
@@ -184,18 +180,18 @@ public class CrqService {
                 .pendingToday((int) pendingToday)
                 .lastScheduledRun(lastScheduled)
                 .lastAdhocRun(lastAdhoc)
-                .recentCrqs(todayCrqs.stream().map(CrqDto::from).collect(Collectors.toList()))
-                .recentLogs(recentLogs.stream().map(ProcessingLogDto::from).collect(Collectors.toList()))
+                .recentCrqs(todayCrqs.stream().map(CrqDto::from).toList())
+                .recentLogs(recentLogs.stream().map(ProcessingLogDto::from).toList())
                 .build();
     }
 
     public List<CrqDto> getAllCrqs() {
         return crqRepository.findAllByOrderByProcessedAtDesc()
-                .stream().map(CrqDto::from).collect(Collectors.toList());
+                .stream().map(CrqDto::from).toList();
     }
 
     public List<ProcessingLogDto> getAllLogs() {
         return processingLogRepository.findAllByOrderByRunAtDesc()
-                .stream().map(ProcessingLogDto::from).collect(Collectors.toList());
+                .stream().map(ProcessingLogDto::from).toList();
     }
 }
