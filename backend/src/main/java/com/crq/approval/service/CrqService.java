@@ -15,7 +15,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -52,7 +51,7 @@ public class CrqService {
 
     /**
      * Ad-hoc processing: processes CRQs whose lastUpdated falls within [fromDateTime, toDateTime].
-     * Both bounds are inclusive. If toDateTime is null, no upper bound is applied.
+     * Both bounds are inclusive and required.
      */
     public ProcessingLog runAdhocJob(String triggeredBy, LocalDateTime fromDateTime, LocalDateTime toDateTime) {
         log.info("Ad-hoc run triggered by {} for range {} → {}", triggeredBy, fromDateTime, toDateTime);
@@ -83,7 +82,7 @@ public class CrqService {
                             if (updatedBefore != null && r.getLastUpdated().isAfter(updatedBefore)) return false;
                             return true;
                         })
-                        .collect(Collectors.toList());
+                        .toList();
                 log.info("Ad-hoc: {} CRQs in range [{}, {}]", rows.size(), updatedAfter, updatedBefore);
             }
 
@@ -122,11 +121,11 @@ public class CrqService {
                     emailService.sendApprovalEmail(approvedCrqs);
                     emailsSent = approvedCrqs.size();
                     LocalDateTime now = LocalDateTime.now();
-                    for (Crq crq : approvedCrqs) {
+                    approvedCrqs.forEach(crq -> {
                         crq.setEmailSent(true);
                         crq.setEmailSentAt(now);
-                        crqRepository.save(crq);
-                    }
+                    });
+                    crqRepository.saveAll(approvedCrqs);
                 } catch (Exception e) {
                     log.error("Email sending failed: {}", e.getMessage());
                     status = "PARTIAL";
@@ -181,18 +180,18 @@ public class CrqService {
                 .pendingToday((int) pendingToday)
                 .lastScheduledRun(lastScheduled)
                 .lastAdhocRun(lastAdhoc)
-                .recentCrqs(todayCrqs.stream().map(CrqDto::from).collect(Collectors.toList()))
-                .recentLogs(recentLogs.stream().map(ProcessingLogDto::from).collect(Collectors.toList()))
+                .recentCrqs(todayCrqs.stream().map(CrqDto::from).toList())
+                .recentLogs(recentLogs.stream().map(ProcessingLogDto::from).toList())
                 .build();
     }
 
     public List<CrqDto> getAllCrqs() {
         return crqRepository.findAllByOrderByProcessedAtDesc()
-                .stream().map(CrqDto::from).collect(Collectors.toList());
+                .stream().map(CrqDto::from).toList();
     }
 
     public List<ProcessingLogDto> getAllLogs() {
         return processingLogRepository.findAllByOrderByRunAtDesc()
-                .stream().map(ProcessingLogDto::from).collect(Collectors.toList());
+                .stream().map(ProcessingLogDto::from).toList();
     }
 }

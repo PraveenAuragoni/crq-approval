@@ -20,6 +20,8 @@ import java.util.Map;
 @RequestMapping("/api/crq")
 public class CrqController {
 
+    private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
     private final CrqService crqService;
 
     public CrqController(CrqService crqService) {
@@ -50,10 +52,9 @@ public class CrqController {
      * Both fromDateTime and toDateTime are required.
      */
     @PostMapping("/adhoc")
-    public ResponseEntity<?> triggerAdhoc(
+    public ResponseEntity<Object> triggerAdhoc(
             @RequestBody(required = false) Map<String, String> body) {
         String triggeredBy = body != null ? body.getOrDefault("triggeredBy", "UI_USER") : "UI_USER";
-        DateTimeFormatter fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
         LocalDateTime from;
         LocalDateTime to;
@@ -64,8 +65,8 @@ public class CrqController {
                 return ResponseEntity.badRequest()
                         .body(Map.of("message", "fromDateTime and toDateTime are required."));
             }
-            from = LocalDateTime.parse(fromRaw, fmt);
-            to   = LocalDateTime.parse(toRaw,   fmt);
+            from = LocalDateTime.parse(fromRaw, DT_FMT);
+            to   = LocalDateTime.parse(toRaw,   DT_FMT);
         } catch (DateTimeParseException e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "Invalid date format. Use ISO format: yyyy-MM-dd'T'HH:mm:ss"));
@@ -76,7 +77,7 @@ public class CrqController {
                     .body(Map.of("message", "fromDateTime must be before toDateTime."));
         }
 
-        log.info("Ad-hoc CRQ run triggered by: {} range: {} → {}", triggeredBy, from, to);
+        log.info("Ad-hoc CRQ run triggered by: {} range: {} -> {}", triggeredBy, from, to);
         ProcessingLog result = crqService.runAdhocJob(triggeredBy, from, to);
         return ResponseEntity.ok(ProcessingLogDto.from(result));
     }

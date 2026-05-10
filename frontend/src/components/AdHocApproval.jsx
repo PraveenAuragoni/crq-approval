@@ -3,7 +3,7 @@ import { triggerAdhoc } from '../services/api.js'
 
 const fmt = dt => dt ? new Date(dt).toLocaleString() : '—'
 
-// Returns "YYYY-MM-DDTHH:mm" string for datetime-local input default values
+// Returns "YYYY-MM-DDTHH:mm:ss" string for datetime-local input default values
 function toInputValue(date) {
   const pad = n => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`
