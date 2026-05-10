@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -42,15 +44,20 @@ public class CrqController {
     }
 
     /**
-     * Ad-hoc trigger: processes CRQs updated after 5:30 PM today.
-     * Body: { "triggeredBy": "username" }
+     * Ad-hoc trigger: processes CRQs whose lastUpdated falls within [fromDateTime, toDateTime].
+     * Body: { "triggeredBy": "username", "fromDateTime": "2024-05-10T17:30:00", "toDateTime": "2024-05-10T23:59:59" }
      */
     @PostMapping("/adhoc")
     public ResponseEntity<ProcessingLogDto> triggerAdhoc(
             @RequestBody(required = false) Map<String, String> body) {
         String triggeredBy = body != null ? body.getOrDefault("triggeredBy", "UI_USER") : "UI_USER";
-        log.info("Ad-hoc CRQ run triggered by: {}", triggeredBy);
-        ProcessingLog result = crqService.runAdhocJob(triggeredBy);
+        DateTimeFormatter fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        LocalDateTime from = body != null && body.get("fromDateTime") != null
+                ? LocalDateTime.parse(body.get("fromDateTime"), fmt) : null;
+        LocalDateTime to = body != null && body.get("toDateTime") != null
+                ? LocalDateTime.parse(body.get("toDateTime"), fmt) : null;
+        log.info("Ad-hoc CRQ run triggered by: {} range: {} → {}", triggeredBy, from, to);
+        ProcessingLog result = crqService.runAdhocJob(triggeredBy, from, to);
         return ResponseEntity.ok(ProcessingLogDto.from(result));
     }
 
