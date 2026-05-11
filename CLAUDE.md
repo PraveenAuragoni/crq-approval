@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 CRQ Approval is a full-stack automation system:
 - **Backend**: Spring Boot 3.2 / Java 17 (`backend/`)
 - **Frontend**: React 18 + Vite 7 (`frontend/`)
-- **Purpose**: Reads CRQ records from an OneDrive Excel file daily at 5:30 PM, checks their status via the Remedy REST API, and emails notifications for approved CRQs ("Request in Change" status). Also supports manual ad-hoc runs from the UI for CRQs updated after 5:30 PM.
+- **Purpose**: Reads CRQ records from an OneDrive Excel file daily at 5:30 PM, checks their status via the Remedy REST API, and emails notifications for approved CRQs ("Request in Change" status). Also supports manual ad-hoc runs from the UI filtered by a date-time range.
 
 ## Commands
 
@@ -31,14 +31,19 @@ JAVA_HOME=$(/usr/libexec/java_home -v 17) ./mvnw clean package -DskipTests
 
 Backend runs on **port 8081** (default and SIT). H2 console at `http://localhost:8081/h2-console`.
 
+**No tests exist** in this repository. `./mvnw test` has nothing to run.
+
 ### Frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev     # dev server on port 5173, proxies /api → http://localhost:8081
-npm run build   # outputs to frontend/dist/
+npm run dev      # dev server on port 5173, proxies /api → http://localhost:8081
+npm run build    # outputs to frontend/dist/
+npm run preview  # preview production build locally
 ```
+
+No ESLint or Prettier is configured.
 
 ### Full SIT Package Build
 
@@ -77,11 +82,11 @@ Three interfaces decouple real vs mock implementations:
 
 ```
 OneDrivePort.downloadExcelFile()
-  → ExcelService.parseExcel()         (Apache POI, columns: CRQ#, Title, Assignee, Desc, LastUpdated)
-  → [filter by lastUpdated > cutoff]  (ad-hoc only)
+  → ExcelService.parseExcel()             (Apache POI, columns: CRQ#, Title, Assignee, Desc, LastUpdated)
+  → [filter by fromDateTime–toDateTime]   (ad-hoc only)
   → RemedyPort.getCrqStatus(crqNumber) per row
   → save Crq entity
-  → EmailPort.sendApprovalEmail()     (one consolidated email for all approved)
+  → EmailPort.sendApprovalEmail()         (one consolidated email for all approved)
   → update emailSent + emailSentAt
   → save ProcessingLog
 ```
@@ -92,7 +97,7 @@ OneDrivePort.downloadExcelFile()
 
 ### Ad-hoc Run Logic
 
-Ad-hoc filters Excel rows where `lastUpdatedInExcel > today@17:30`. The threshold is configurable via `crq.adhoc.threshold-time` in properties.
+Ad-hoc filters Excel rows where `lastUpdatedInExcel` falls between a caller-supplied `fromDateTime` and `toDateTime` (both ISO-8601 strings). The UI sends these from the Ad-Hoc Approval form.
 
 ### Mock Data
 
@@ -105,12 +110,20 @@ Ad-hoc filters Excel rows where `lastUpdatedInExcel > today@17:30`. The threshol
 | `GET /dashboard` | Stats + today's CRQs + last 10 logs |
 | `GET /list` | All CRQ records |
 | `GET /logs` | All processing logs |
-| `POST /adhoc` | Trigger ad-hoc run `{"triggeredBy":"name"}` |
+| `POST /adhoc` | Trigger ad-hoc run — body: `{"triggeredBy":"name","fromDateTime":"ISO-8601","toDateTime":"ISO-8601"}` |
 | `POST /run-now` | Force full scheduled run |
+
+### Data Model
+
+**`Crq` entity** key fields: `crqNumber`, `remedyStatus`, `approved` (boolean), `emailSent`, `emailSentAt`, `processedAt`, `lastUpdatedInExcel`, `batchType` (SCHEDULED/ADHOC), `batchRunAt`.
+
+**`ProcessingLog` entity** key fields: `runAt`, `batchType`, `totalCrqsRead`, `approvedCount`, `emailsSent`, `status` (SUCCESS/PARTIAL/FAILED), `errorMessage`, `triggeredBy`.
+
+DTOs (`CrqDto`, `DashboardDto`, `ProcessingLogDto`) each expose a static `from()` factory method.
 
 ### Frontend Structure
 
-Single-page app with sidebar navigation. No routing library used — tab state managed in `App.jsx`. API calls centralized in `src/services/api.js` (Axios, baseURL `/api/crq`).
+Single-page app with sidebar navigation (Dashboard, CRQ List, Ad-Hoc Approval, Processing Logs). Tab state managed in `App.jsx` with `useState` — no routing library used despite `react-router-dom` being installed. API calls centralized in `src/services/api.js` (Axios, baseURL `/api/crq`).
 
 ### Deployment (SIT)
 
@@ -130,3 +143,4 @@ The Maven build copies `frontend/dist/` into `target/classes/static/`, so the Sp
 - **Graph SDK v6**: `users().byUserId().drive()` returns a limited `DriveRequestBuilder` with no `root()` or `items()`. Resolve drive ID first via `.drive().get()`, then use `drives().byDriveId(id).items().byDriveItemId("root:/path:")`.
 - **Hibernate 6 JPQL**: `DATE()` function returns `Object`, breaking type-safe comparisons. Use `findByProcessedAtBetween(startOfDay, endOfDay)` with `LocalDateTime` parameters instead.
 - **Excel columns**: 0=CRQ Number, 1=Title, 2=Assignee, 3=Description, 4=Last Updated (date cell).
+- **react-router-dom**: Installed as a dependency but not used — tab navigation is purely `useState` in `App.jsx`.
