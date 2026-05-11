@@ -23,7 +23,7 @@ public class Crq {
     @Column(nullable = false)
     private String crqNumber;
 
-    // Type/category from Excel (Standard, Emergency, …) — used as the display title
+    // Change type from Excel col F (Standard, Emergency, …)
     private String title;
 
     // Application / team name from Excel col C
@@ -31,9 +31,6 @@ public class Crq {
 
     // Country from Excel col D
     private String country;
-
-    // CRQ type from Excel col F (mirrors title for backward compatibility)
-    private String crqType;
 
     // Created flag from Excel col B (Yes / No)
     private String created;

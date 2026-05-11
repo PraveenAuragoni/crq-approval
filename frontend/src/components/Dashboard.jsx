@@ -84,8 +84,9 @@ export default function Dashboard() {
                 <thead>
                   <tr>
                     <th>CRQ Number</th>
-                    <th>Title</th>
-                    <th>Assignee</th>
+                    <th>Type</th>
+                    <th>Application</th>
+                    <th>Country</th>
                     <th>Remedy Status</th>
                     <th>Approved</th>
                     <th>Email Sent</th>
@@ -98,7 +99,8 @@ export default function Dashboard() {
                     <tr key={crq.id}>
                       <td><strong>{crq.crqNumber}</strong></td>
                       <td>{crq.title || '—'}</td>
-                      <td>{crq.assignee || '—'}</td>
+                      <td>{crq.application || '—'}</td>
+                      <td>{crq.country || '—'}</td>
                       <td>
                         <span className={`badge ${crq.approved ? 'badge-green' : 'badge-orange'}`}>
                           {crq.remedyStatus || 'Unknown'}
