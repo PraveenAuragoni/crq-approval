@@ -16,7 +16,10 @@ public class CrqDto {
     private Long id;
     private String crqNumber;
     private String title;
-    private String assignee;
+    private String application;
+    private String country;
+    private String crqType;
+    private String created;
     private String description;
     private String remedyStatus;
     private boolean approved;
@@ -32,7 +35,10 @@ public class CrqDto {
                 .id(crq.getId())
                 .crqNumber(crq.getCrqNumber())
                 .title(crq.getTitle())
-                .assignee(crq.getAssignee())
+                .application(crq.getApplication())
+                .country(crq.getCountry())
+                .crqType(crq.getCrqType())
+                .created(crq.getCreated())
                 .description(crq.getDescription())
                 .remedyStatus(crq.getRemedyStatus())
                 .approved(crq.isApproved())

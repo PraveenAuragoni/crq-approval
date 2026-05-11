@@ -23,16 +23,27 @@ public class Crq {
     @Column(nullable = false)
     private String crqNumber;
 
+    // Type/category from Excel (Standard, Emergency, …) — used as the display title
     private String title;
 
-    private String assignee;
+    // Application / team name from Excel col C
+    private String application;
+
+    // Country from Excel col D
+    private String country;
+
+    // CRQ type from Excel col F (mirrors title for backward compatibility)
+    private String crqType;
+
+    // Created flag from Excel col B (Yes / No)
+    private String created;
 
     private String description;
 
     // Status fetched from Remedy API
     private String remedyStatus;
 
-    // Whether this CRQ is approved (status = "Request in Change")
+    // Whether this CRQ is approved (status == configured approved-status)
     private boolean approved;
 
     // Whether approval email was sent
@@ -40,10 +51,10 @@ public class Crq {
 
     private LocalDateTime emailSentAt;
 
-    // When this CRQ was read from Excel/OneDrive
+    // When this CRQ was read/processed
     private LocalDateTime processedAt;
 
-    // Last updated time on the Excel row (from OneDrive file metadata)
+    // Date of the green date-separator row this CRQ belongs to
     private LocalDateTime lastUpdatedInExcel;
 
     // SCHEDULED = daily 5:30 PM run | ADHOC = manual UI trigger
