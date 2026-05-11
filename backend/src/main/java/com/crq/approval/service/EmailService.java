@@ -81,7 +81,7 @@ public class EmailService implements EmailPort {
             sb.append("<td>").append(idx++).append("</td>");
             sb.append("<td><strong>").append(safe(crq.getCrqNumber())).append("</strong></td>");
             sb.append("<td>").append(safe(crq.getTitle())).append("</td>");
-            sb.append("<td>").append(safe(crq.getAssignee())).append("</td>");
+            sb.append("<td>").append(safe(crq.getApplication())).append("</td>");
             sb.append("<td style='color:green;'>").append(safe(crq.getRemedyStatus())).append("</td>");
             sb.append("</tr>");
         }
