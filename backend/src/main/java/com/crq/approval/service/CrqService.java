@@ -15,7 +15,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -72,7 +71,6 @@ public class CrqService {
 
             // 2. Parse Excel rows
             List<ExcelService.ExcelCrqRow> rows = excelService.parseExcel(stream);
-            totalRead = rows.size();
 
             // Scheduled: only process CRQs belonging to today's date group (green row)
             if (batchType == Crq.BatchType.SCHEDULED) {
@@ -97,6 +95,9 @@ public class CrqService {
                 log.info("Ad-hoc: {} CRQs in range [{}, {}]", rows.size(), updatedAfter, updatedBefore);
             }
 
+            // totalRead reflects the rows actually processed (after date filtering)
+            totalRead = rows.size();
+
             List<Crq> approvedCrqs = new ArrayList<>();
 
             // 3. Check each CRQ in Remedy
@@ -109,7 +110,6 @@ public class CrqService {
                         .title(row.getType())
                         .application(row.getApplication())
                         .country(row.getCountry())
-                        .crqType(row.getType())
                         .created(row.getCreated())
                         .description(row.getDescription())
                         .remedyStatus(remedyStatus)

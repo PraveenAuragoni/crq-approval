@@ -18,7 +18,6 @@ public class CrqDto {
     private String title;
     private String application;
     private String country;
-    private String crqType;
     private String created;
     private String description;
     private String remedyStatus;
@@ -37,7 +36,6 @@ public class CrqDto {
                 .title(crq.getTitle())
                 .application(crq.getApplication())
                 .country(crq.getCountry())
-                .crqType(crq.getCrqType())
                 .created(crq.getCreated())
                 .description(crq.getDescription())
                 .remedyStatus(crq.getRemedyStatus())

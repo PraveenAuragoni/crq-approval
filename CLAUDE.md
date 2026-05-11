@@ -142,5 +142,5 @@ The Maven build copies `frontend/dist/` into `target/classes/static/`, so the Sp
 - **H2 URL**: Do not combine `AUTO_SERVER=TRUE` with `DB_CLOSE_ON_EXIT=FALSE` — H2 2.x rejects it.
 - **Graph SDK v6**: `users().byUserId().drive()` returns a limited `DriveRequestBuilder` with no `root()` or `items()`. Resolve drive ID first via `.drive().get()`, then use `drives().byDriveId(id).items().byDriveItemId("root:/path:")`.
 - **Hibernate 6 JPQL**: `DATE()` function returns `Object`, breaking type-safe comparisons. Use `findByProcessedAtBetween(startOfDay, endOfDay)` with `LocalDateTime` parameters instead.
-- **Excel columns**: 0=CRQ Number, 1=Title, 2=Assignee, 3=Description, 4=Last Updated (date cell).
+- **Excel columns**: 0=S.No (skip), 1=Created, 2=Application, 3=Country, 4=CRQ Number, 5=Type, 7=Description. Green-filled rows are date separators — the date in col A is inherited by all data rows below until the next green row.
 - **react-router-dom**: Installed as a dependency but not used — tab navigation is purely `useState` in `App.jsx`.
